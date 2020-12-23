@@ -1,4 +1,5 @@
 from flask import Flask
+from flask.helpers import flash
 from config import config
 from flask_moment import Moment
 
