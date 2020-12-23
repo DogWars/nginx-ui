@@ -1,22 +1,46 @@
-$(document).ready(function() {
+$(document).ready(function () {
     $('.ui.dropdown').dropdown();
 
-    $('.config.item').click(function() {
+    $('.config.item').click(function () {
         var name = $(this).html();
         load_config(name);
     });
 
-    $('#domains').click(function() { load_domains() });
+    $('#domains').click(function () {
+        load_domains()
+    });
 
     load_domains();
 
 });
 
 function load_domains() {
-    $.when(fetch_html('api/domains')).then(function() {
+    $.when(fetch_html('api/domains')).then(function () {
         $('#domain').hide();
         $('#domain_cards').fadeIn();
     });
+}
+
+function reload_nginx() {
+    $.ajax({
+        type: 'GET',
+        url: '/api/nginx/reload',
+        success: function (ret) {
+            if (ret.success) {
+                alert("重启成功")
+            } else {
+                alert("重启失败,请检查配置")
+            }
+        },
+        // statusCode: {
+        //     200: function () {
+        //         alert("重启成功")
+        //     },
+        //     201: function () {
+        //         alert("重启失败,请检查配置")
+        //     }
+        // }
+    })
 }
 
 function add_domain() {
@@ -27,7 +51,9 @@ function add_domain() {
         type: 'POST',
         url: '/api/domain/' + name,
         statusCode: {
-            201: function() { fetch_domain(name) }
+            201: function () {
+                fetch_domain(name)
+            }
         }
     });
 
@@ -44,7 +70,9 @@ function enable_domain(name, enable) {
             enable: enable
         }),
         statusCode: {
-            200: function() { fetch_domain(name); }
+            200: function () {
+                fetch_domain(name);
+            }
         }
     });
 
@@ -63,7 +91,11 @@ function update_domain(name) {
             file: _file
         }),
         statusCode: {
-            200: function() { setTimeout(function(){ fetch_domain(name) }, 400) }
+            200: function () {
+                setTimeout(function () {
+                    fetch_domain(name)
+                }, 400)
+            }
         }
     });
 
@@ -72,15 +104,15 @@ function update_domain(name) {
 function fetch_domain(name) {
 
     fetch('api/domain/' + name)
-    .then(function(response) {
-        response.text().then(function(text) {
-            $('#domain').html(text).fadeIn();
-            $('#domain_cards').hide();
+        .then(function (response) {
+            response.text().then(function (text) {
+                $('#domain').html(text).fadeIn();
+                $('#domain_cards').hide();
+            });
+        })
+        .catch(function (error) {
+            console.error(error);
         });
-    })
-    .catch(function(error) {
-        console.error(error);
-    });
 
 }
 
@@ -90,10 +122,10 @@ function remove_domain(name) {
         type: 'DELETE',
         url: '/api/domain/' + name,
         statusCode: {
-            200: function() {
+            200: function () {
                 load_domains();
             },
-            400: function() {
+            400: function () {
                 alert('Deleting not possible');
             }
         }
@@ -104,14 +136,14 @@ function remove_domain(name) {
 function fetch_html(url) {
 
     fetch(url)
-    .then(function(response) {
-        response.text().then(function(text) {
-            $('#content').html(text);
+        .then(function (response) {
+            response.text().then(function (text) {
+                $('#content').html(text);
+            });
+        })
+        .catch(function (error) {
+            console.error(error);
         });
-    })
-    .catch(function(error) {
-        console.error(error);
-    });
 
 }
 
@@ -128,9 +160,9 @@ function update_config(name) {
             file: _file
         }),
         statusCode: {
-            200: function() {
+            200: function () {
 
-                setTimeout(function() {
+                setTimeout(function () {
                     $('#dimmer').removeClass('active');
                 }, 450);
 
@@ -143,13 +175,13 @@ function update_config(name) {
 function load_config(name) {
 
     fetch('api/config/' + name)
-    .then(function(response) {
-        response.text().then(function(text) {
-            $('#content').html(text);
+        .then(function (response) {
+            response.text().then(function (text) {
+                $('#content').html(text);
+            });
+        })
+        .catch(function (error) {
+            console.error(error);
         });
-    })
-    .catch(function(error) {
-        console.error(error);
-    });
 
 }

@@ -3,7 +3,6 @@ from flask.helpers import flash
 from config import config
 from flask_moment import Moment
 
-
 moment = Moment()
 
 
@@ -21,3 +20,6 @@ def create_app(config_name):
     app.register_blueprint(api_blueprint, url_prefix='/api')
 
     return app
+
+
+

@@ -4,6 +4,5 @@ Flask-Moment==0.9.0
 itsdangerous==1.1.0
 Jinja2==2.11.2
 MarkupSafe==1.1.1
-pytz==2020.1
-uWSGI==2.0.18
+pytz==2020.
 Werkzeug==1.0.1

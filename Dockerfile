@@ -1,5 +1,5 @@
 FROM python:3.7-alpine
-
+RUN echo -e http://mirrors.ustc.edu.cn/alpine/v3.7/main/ >> /etc/apk/repositories
 ADD requirements.txt .
 
 RUN apk add python3-dev build-base linux-headers pcre-dev && pip install --no-cache-dir -r requirements.txt -i http://pypi.douban.com/simple
