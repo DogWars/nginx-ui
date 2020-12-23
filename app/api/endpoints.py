@@ -71,6 +71,8 @@ def get_domains():
                 my_file = Path(f"{config_path}{os.sep}{file}")
                 if not my_file.exists():
                     continue
+                if not file.endswith(".conf") and not file.endswith('disabled'):
+                    continue
                 domain, state = file.rsplit('.', 1)
                 if state == 'conf':
                     time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(config_path, file)))
