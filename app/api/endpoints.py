@@ -5,6 +5,10 @@ import flask
 
 from app.api import api
 
+def fix_name(base_path,file_name,restore:bool):
+   return f'{base_path}{os.sep}{file_name}'.replace(f'{os.sep}','|').replace(f'{base_path}','') if restore else \
+   f'{file_name}'.replace(f'|','{os.sep}'),
+
 
 @api.route('/config/<name>',  methods=['GET'])
 def get_config(name: str):
@@ -53,31 +57,32 @@ def get_domains():
     :return: Rendered HTML document with the domains
     :rtype: str
     """
-    config_path = flask.current_app.config['CONFIG_PATH']
+    base_config_path = flask.current_app.config['CONFIG_PATH']
     sites_available = []
     sites_enabled = []
+    
+    def deep_path(config_path):
+        for root, dirs, files  in os.walk(config_path):
+            for file in files:
+                domain, state = file.rsplit('.', 1)
+                if state == 'conf':
+                    time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(config_path, file)))
 
-    for _ in os.listdir(config_path):
+                    sites_available.append({
+                        'name': domain,
+                        'time': time
+                    })
+                    sites_enabled.append(domain)
+                elif state == 'disabled':
+                    time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(config_path, file)))
 
-        if os.path.isfile(os.path.join(config_path, _)):
-            domain, state = _.rsplit('.', 1)
-
-            if state == 'conf':
-                time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(config_path, _)))
-
-                sites_available.append({
-                    'name': domain,
-                    'time': time
-                })
-                sites_enabled.append(domain)
-            elif state == 'disabled':
-                time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(config_path, _)))
-
-                sites_available.append({
-                    'name': domain.rsplit('.', 1)[0],
-                    'time': time
-                })
-
+                    sites_available.append({
+                        'name': domain.rsplit('.', 1)[0],
+                        'time': time
+                    })
+            for dir in dirs:
+                deep_path(f'{config_path}{os.sep}{dir}')
+    deep_path(base_config_path)
     # sort sites by name
     sites_available = sorted(sites_available, key=lambda _: _['name'])
     return flask.render_template('domains.html', sites_available=sites_available, sites_enabled=sites_enabled), 200
@@ -95,23 +100,28 @@ def get_domain(name: str):
     :return: Rendered HTML document with the domain
     :rtype: str
     """
-    config_path = flask.current_app.config['CONFIG_PATH']
+    base_config_path = flask.current_app.config['CONFIG_PATH']
     _file = ''
     enabled = True
 
-    for _ in os.listdir(config_path):
 
-        if os.path.isfile(os.path.join(config_path, _)):
-            if _.startswith(name):
-                domain, state = _.rsplit('.', 1)
+    def deep_path(config_path):
+        for root, dirs, files  in os.walk(config_path):
+            for _ in files:
+                if _.startswith(name):
+                    domain, state = _.rsplit('.', 1)
 
-                if state == 'disabled':
-                    enabled = False
+                    if state == 'disabled':
+                        enabled = False
 
-                with io.open(os.path.join(config_path, _), 'r') as f:
-                    _file = f.read()
+                    with io.open(os.path.join(config_path, _), 'r') as f:
+                        _file = f.read()
 
-                break
+                    break
+            for dir in dirs:
+                deep_path(f'{config_path}{os.sep}{dir}')
+    deep_path(base_config_path)
+
 
     return flask.render_template('domain.html', name=name, file=_file, enabled=enabled), 200
 
@@ -136,9 +146,9 @@ def post_domain(name: str):
 
         response = flask.jsonify({'success': True}), 201
     except Exception as ex:
-        response = flask.jsonify({'success': False, 'error_msg': ex}), 500
+        return flask.jsonify({'success': False, 'error_msg': ex}), 500
 
-    return response
+
 
 
 @api.route('/domain/<name>', methods=['DELETE'])
@@ -155,7 +165,6 @@ def delete_domain(name: str):
     removed = False
 
     for _ in os.listdir(config_path):
-
         if os.path.isfile(os.path.join(config_path, _)):
             if _.startswith(name):
                 os.remove(os.path.join(config_path, _))
@@ -181,13 +190,18 @@ def put_domain(name: str):
     content = flask.request.get_json()
     config_path = flask.current_app.config['CONFIG_PATH']
 
-    for _ in os.listdir(config_path):
 
-        if os.path.isfile(os.path.join(config_path, _)):
-            if _.startswith(name):
-                with io.open(os.path.join(config_path, _), 'w') as f:
-                    f.write(content['file'])
 
+    def deep_path(_config_path):
+        for root, dirs, files  in os.walk(_config_path):
+            for _ in files:
+                if _.startswith(name):
+                    with io.open(os.path.join(_config_path, _), 'w') as f:
+                        f.write(content['file'])
+                    break
+            for dir in dirs:
+                deep_path(f'{_config_path}{os.sep}{dir}')
+    deep_path(config_path)
     return flask.make_response({'success': True}), 200
 
 
@@ -204,14 +218,17 @@ def enable_domain(name: str):
     content = flask.request.get_json()
     config_path = flask.current_app.config['CONFIG_PATH']
 
-    for _ in os.listdir(config_path):
-
-        if os.path.isfile(os.path.join(config_path, _)):
-            if _.startswith(name):
-                if content['enable']:
-                    new_filename, disable = _.rsplit('.', 1)
-                    os.rename(os.path.join(config_path, _), os.path.join(config_path, new_filename))
-                else:
-                    os.rename(os.path.join(config_path, _), os.path.join(config_path, _ + '.disabled'))
-
+    def deep_path(_config_path):
+        for root, dirs, files  in os.walk(_config_path):
+            for _ in files:
+                if _.startswith(name):
+                    if content['enable']:
+                        new_filename, disable = _.rsplit('.', 1)
+                        os.rename(os.path.join(_config_path, _), os.path.join(_config_path, new_filename))
+                    else:
+                        os.rename(os.path.join(_config_path, _), os.path.join(_config_path, _ + '.disabled'))
+                    break
+            for dir in dirs:
+                deep_path(f'{config_path}{os.sep}{dir}')
+    deep_path(config_path)            
     return flask.make_response({'success': True}), 200
